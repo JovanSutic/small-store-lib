@@ -1,0 +1,13 @@
+# Ignore the dist folder
+/dist
+
+# Ignore node_modules
+/node_modules
+
+# Ignore environment-specific files
+*.env
+
+# Ignore logs
+npm-debug.log
+yarn-debug.log
+yarn-error.log
