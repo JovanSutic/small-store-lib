@@ -1,10 +1,10 @@
 import { useSyncExternalStore } from "react";
-import { StateKey, StateKeyOrKeys } from "./index.types";
-
+import { Action, StateKey, StateKeyOrKeys } from "./index.types";
 
 class Store<T extends Record<string, any>> {
   state: T;
   subscribers: Record<keyof T, Function[]>;
+  reducers: Record<string, (state: T, action: Action) => T> = {};
 
   constructor(initialState: T) {
     this.state = { ...initialState };
@@ -18,10 +18,14 @@ class Store<T extends Record<string, any>> {
     return this.state;
   }
 
-  setState(part: StateKeyOrKeys<T>, updateFunc: (state: T) => T) {
-    const newState = updateFunc(this.state);
-    this.state = newState;
-    this.notifySubscribers(part);
+  // setState(part: StateKeyOrKeys<T>, updateFunc: (state: T) => T) {
+  //   const newState = updateFunc(this.state);
+  //   this.state = newState;
+  //   this.notifySubscribers(part);
+  // }
+
+  addReducer(actionType: string, reducer: (state: T, action: Action) => T) {
+    this.reducers[actionType] = reducer;
   }
 
   subscribe(part: StateKeyOrKeys<T>, subscriber: Function) {
@@ -41,6 +45,20 @@ class Store<T extends Record<string, any>> {
       });
     } else {
       this.subscribers[part]?.forEach((subscriber) => subscriber());
+    }
+  }
+
+  triggerDispatch(action: Action) {
+    if (!this.state) {
+      throw new Error("Store is not initialized.");
+    }
+
+    const reducer = this.reducers[action.type];
+    if (reducer) {
+      this.state = reducer(this.state, action);
+      this.notifySubscribers(action.part);
+    } else {
+      console.error(`No reducer found for action type: ${action.type}`);
     }
   }
 }
@@ -87,4 +105,12 @@ export function useCustomStore<T extends Record<StateKey<T>, any>>(
   };
 
   return useSyncExternalStore(subscribe, getSnapshot);
+}
+
+export function dispatch(action: Action) {
+  if (!store) {
+    throw new Error("Store was used before it is initialized.");
+  }
+
+  store.triggerDispatch(action);
 }
